@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Thought Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root, html[data-theme="dark"] {
+      --bg: #0c0c0b;
+      --ink: #eceae4;
+      --muted: #7a776f;
+      --line: rgba(255, 255, 255, 0.08);
+      --glass: rgba(18, 18, 16, 0.88);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --chip: rgba(255, 255, 255, 0.07);
+      --placeholder: #5c5a54;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      --danger: #c45c4a;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f4f2ec;
+      --ink: #1c1b18;
+      --muted: #7a776f;
+      --line: rgba(28, 27, 24, 0.1);
+      --glass: rgba(255, 255, 255, 0.78);
+      --glass-border: rgba(28, 27, 24, 0.12);
+      --chip: rgba(28, 27, 24, 0.06);
+      --placeholder: #9a968c;
+      --shadow: 0 20px 50px rgba(28, 27, 24, 0.1);
+      --danger: #b54532;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body { min-height: 100%; }
+
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.1rem 1.4rem;
+    }
+
+    .brand {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    nav {
+      display: flex;
+      gap: 0.15rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav-btn, .theme-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.78rem;
+      padding: 0.35rem 0.65rem;
+      cursor: pointer;
+      border-radius: 999px;
+    }
+
+    .nav-btn.active {
+      color: var(--ink);
+      background: var(--chip);
+    }
+
+    .theme-btn {
+      border: 1px solid var(--line);
+      min-width: 2.4rem;
+    }
+
+    .feed {
+      display: none;
+      position: fixed;
+      top: 3.6rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(640px, calc(100% - 2rem));
+      height: calc(100vh - 4.6rem);
+      overflow-y: auto;
+      padding: 0.5rem 0.25rem 3rem;
+    }
+
+    body[data-screen="browse"] .feed { display: block; }
+
+    .thought {
+      padding: 1.35rem 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .thought-text {
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.28rem;
+      line-height: 1.5;
+      letter-spacing: -0.01em;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .thought-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.7rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .kind { text-transform: lowercase; letter-spacing: 0.04em; }
+
+    .ghost {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font: inherit;
+      font-size: 0.72rem;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .ghost:hover { color: var(--ink); }
+    .ghost.danger:hover { color: var(--danger); }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 22vh 1rem 0;
+    }
+
+    .composer-wrap {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(520px, calc(100% - 2rem));
+      z-index: 50;
+    }
+
+    body[data-screen="home"] .composer-wrap { display: block; }
+
+    .composer {
+      background: var(--glass);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 0.9rem 1rem 0.75rem;
+      box-shadow: var(--shadow);
+    }
+
+    .saved {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.55rem;
+      min-height: 1em;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .saved.show { opacity: 1; }
+
+    textarea {
+      width: 100%;
+      background: transparent;
+      border: none;
+      resize: none;
+      outline: none;
+      color: var(--ink);
+      font-family: "Instrument Serif", Georgia, serif;
+      font-size: 1.2rem;
+      line-height: 1.45;
+      min-height: 1.5em;
+      max-height: 8.5rem;
+    }
+
+    textarea::placeholder { color: var(--placeholder); }
+
+    .composer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.55rem;
+      gap: 0.75rem;
+    }
+
+    .kinds { display: flex; gap: 0.15rem; }
+
+    .kinds label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+    }
+
+    .kinds input { display: none; }
+    .kinds input:checked + span { color: var(--ink); background: var(--chip); }
+
+    .send {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--bg);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .send:active { transform: scale(0.94); }
+  </style>
+</head>
+<body data-screen="home">
+  <header>
+    <div class="brand" id="brand">Thought Vault</div>
+    <div class="header-right">
+      <nav>
+        <button class="nav-btn active" data-view="home">Home</button>
+        <button class="nav-btn" data-view="all">All</button>
+        <button class="nav-btn" data-view="idea">Ideas</button>
+        <button class="nav-btn" data-view="philosophy">Philosophy</button>
+        <button class="nav-btn" data-view="thinking">Thinking</button>
+        <button class="nav-btn" data-view="deleted" id="deletedNav">Deleted</button>
+      </nav>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle theme">Light</button>
+    </div>
+  </header>
+
+  <main class="feed" id="feed"></main>
+
+  <div class="composer-wrap" id="composerWrap">
+    <p class="saved" id="savedHint"></p>
+    <form class="composer" id="composer">
+      <textarea id="input" rows="1" placeholder="A thought, a view, a question…"></textarea>
+      <div class="composer-row">
+        <div class="kinds">
+          <label><input type="radio" name="kind" value="idea" checked><span>idea</span></label>
+          <label><input type="radio" name="kind" value="philosophy"><span>philosophy</span></label>
+          <label><input type="radio" name="kind" value="thinking"><span>thinking</span></label>
+        </div>
+        <button class="send" type="submit" aria-label="Save">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"></line>
+            <polyline points="5 12 12 5 19 12"></polyline>
+          </svg>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const STORAGE = "thought_vault_v1";
+    const THEME_KEY = "thought_vault_theme";
+    const RETAIN_MS = 30 * 24 * 60 * 60 * 1000;
+    const KIND_LABEL = { idea: "idea", philosophy: "philosophy", thinking: "thinking" };
+
+    const input = document.getElementById("input");
+    const feed = document.getElementById("feed");
+    const savedHint = document.getElementById("savedHint");
+    const themeBtn = document.getElementById("themeBtn");
+    let view = "home";
+    let savedTimer;
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(STORAGE) || "[]"); }
+      catch { return []; }
+    }
+
+    function save(next) {
+      localStorage.setItem(STORAGE, JSON.stringify(next));
+    }
+
+    function now() { return Date.now(); }
+
+    function purge(list) {
+      const cutoff = now() - RETAIN_MS;
+      return list.filter(t => !t.deletedAt || t.deletedAt > cutoff);
+    }
+
+    function daysLeft(deletedAt) {
+      return Math.max(0, Math.ceil((deletedAt + RETAIN_MS - now()) / 86400000));
+    }
+
+    function formatWhen(ts) {
+      return new Date(ts).toLocaleDateString("en-US", {
+        month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+      });
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+      }[ch]));
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem(THEME_KEY, theme);
+      themeBtn.textContent = theme === "dark" ? "Light" : "Dark";
+    }
+
+    applyTheme(localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark");
+
+    let items = purge(load());
+    save(items);
+
+    function visible() {
+      if (view === "deleted") return items.filter(t => t.deletedAt);
+      if (view === "all") return items.filter(t => !t.deletedAt);
+      return items.filter(t => !t.deletedAt && t.kind === view);
+    }
+
+    function setView(next) {
+      view = next;
+      document.body.dataset.screen = next === "home" ? "home" : "browse";
+      document.querySelectorAll(".nav-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.view === next);
+      });
+      render();
+    }
+
+    function render() {
+      const deletedCount = items.filter(t => t.deletedAt).length;
+      document.getElementById("deletedNav").textContent =
+        deletedCount ? `Deleted (${deletedCount})` : "Deleted";
+
+      if (view === "home") {
+        feed.innerHTML = "";
+        return;
+      }
+
+      const list = visible();
+      if (!list.length) {
+        const empty = {
+          deleted: "Nothing in Deleted. Removed thoughts stay here for 30 days.",
+          all: "No thoughts yet. Capture them on Home.",
+          idea: "No ideas yet.",
+          philosophy: "No philosophical views yet.",
+          thinking: "No thinking captured yet."
+        };
+        feed.innerHTML = `<p class="empty">${empty[view] || "Nothing here yet."}</p>`;
+        return;
+      }
+
+      feed.innerHTML = list.map(t => {
+        if (t.deletedAt) {
+          return `<article class="thought">
+            <div class="thought-text">${escapeHTML(t.text)}</div>
+            <div class="thought-meta">
+              <span class="kind">${KIND_LABEL[t.kind] || t.kind}</span>
+              <span>${daysLeft(t.deletedAt)} days left</span>
+              <button class="ghost" data-restore="${t.id}">Restore</button>
+            </div>
+          </article>`;
+        }
+        return `<article class="thought">
+          <div class="thought-text">${escapeHTML(t.text)}</div>
+          <div class="thought-meta">
+            <span class="kind">${KIND_LABEL[t.kind] || t.kind}</span>
+            <span>${formatWhen(t.createdAt)}</span>
+            <button class="ghost danger" data-delete="${t.id}">Delete</button>
+          </div>
+        </article>`;
+      }).join("");
+    }
+
+    function flashSaved() {
+      savedHint.textContent = "Saved";
+      savedHint.classList.add("show");
+      clearTimeout(savedTimer);
+      savedTimer = setTimeout(() => savedHint.classList.remove("show"), 1400);
+    }
+
+    document.getElementById("composer").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      const kind = document.querySelector('input[name="kind"]:checked').value;
+      items.unshift({
+        id: crypto.randomUUID(),
+        text,
+        kind,
+        createdAt: now(),
+        deletedAt: null
+      });
+      save(items);
+      input.value = "";
+      input.style.height = "auto";
+      flashSaved();
+      render();
+    });
+
+    input.addEventListener("input", function () {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 136) + "px";
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById("composer").requestSubmit();
+      }
+    });
+
+    document.querySelector("nav").addEventListener("click", (e) => {
+      const btn = e.target.closest(".nav-btn");
+      if (!btn) return;
+      setView(btn.dataset.view);
+    });
+
+    document.getElementById("brand").addEventListener("click", () => setView("home"));
+
+    themeBtn.addEventListener("click", () => {
+      applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+    });
+
+    feed.addEventListener("click", (e) => {
+      const del = e.target.closest("[data-delete]");
+      const restore = e.target.closest("[data-restore]");
+      if (del) {
+        const t = items.find(x => x.id === del.dataset.delete);
+        if (t) t.deletedAt = now();
+        save(items);
+        render();
+      }
+      if (restore) {
+        const t = items.find(x => x.id === restore.dataset.restore);
+        if (t) t.deletedAt = null;
+        save(items);
+        render();
+      }
+    });
+
+    setView("home");
+  </script>
+</body>
+</html>
