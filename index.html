@@ -290,7 +290,11 @@
     </form>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = "https://brwelflbtatldttkqxhr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_GULf66zwP1oreWFW1KxQxQ_7FGXTKBu";
+
     const STORAGE = "thought_vault_v1";
     const THEME_KEY = "thought_vault_theme";
     const RETAIN_MS = 30 * 24 * 60 * 60 * 1000;
@@ -343,8 +347,53 @@
 
     applyTheme(localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark");
 
+    const sb = (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase)
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
+
+    function toRow(t) {
+      return {
+        id: t.id,
+        text: t.text,
+        kind: t.kind,
+        created_at: new Date(t.createdAt).toISOString(),
+        deleted_at: t.deletedAt ? new Date(t.deletedAt).toISOString() : null
+      };
+    }
+
+    function fromRow(r) {
+      return {
+        id: r.id,
+        text: r.text,
+        kind: r.kind,
+        createdAt: new Date(r.created_at).getTime(),
+        deletedAt: r.deleted_at ? new Date(r.deleted_at).getTime() : null
+      };
+    }
+
+    async function pushThought(t) {
+      if (!sb) return;
+      await sb.from("thoughts").upsert(toRow(t));
+    }
+
+    async function pullCloud() {
+      if (!sb) return;
+      const { data, error } = await sb.from("thoughts").select("*");
+      if (error || !data) return;
+      if (data.length) {
+        items = purge(data.map(fromRow)).sort((a, b) => b.createdAt - a.createdAt);
+        save(items);
+        render();
+        return;
+      }
+      if (items.length) {
+        await sb.from("thoughts").upsert(items.map(toRow));
+      }
+    }
+
     let items = purge(load());
     save(items);
+    pullCloud();
 
     function visible() {
       if (view === "deleted") return items.filter(t => t.deletedAt);
@@ -418,14 +467,16 @@
       const text = input.value.trim();
       if (!text) return;
       const kind = document.querySelector('input[name="kind"]:checked').value;
-      items.unshift({
+      const thought = {
         id: crypto.randomUUID(),
         text,
         kind,
         createdAt: now(),
         deletedAt: null
-      });
+      };
+      items.unshift(thought);
       save(items);
+      pushThought(thought);
       input.value = "";
       input.style.height = "auto";
       flashSaved();
@@ -463,12 +514,14 @@
         const t = items.find(x => x.id === del.dataset.delete);
         if (t) t.deletedAt = now();
         save(items);
+        if (t) pushThought(t);
         render();
       }
       if (restore) {
         const t = items.find(x => x.id === restore.dataset.restore);
         if (t) t.deletedAt = null;
         save(items);
+        if (t) pushThought(t);
         render();
       }
     });
